@@ -157,7 +157,7 @@ def experiement(fst_level_cluster_num, snd_level_cluster_num, \
     test_segments, reconstruct_test_data = cut_segments(test_data, segment_size, overlap_size, overlap=overlap)
     new_test_data = quantization(reconstruct_test_data, fst_kmeans, dic, fst_level_cluster_num, snd_level_cluster_num)
 
-    classify_predict(new_train_data, new_test_data, class_names, clf)
+    return classify_predict(new_train_data, new_test_data, class_names, clf)
 
 def plot(classes, class_names, new_train_data, fst_level_cluster_num, snd_level_cluster_num):
     print('Saving figures...')
@@ -167,11 +167,6 @@ def plot(classes, class_names, new_train_data, fst_level_cluster_num, snd_level_
 
 def main():
     classes = 14
-    fst_level_cluster_num = 40
-    snd_level_cluster_num = 12
-    segment_size = 96 #96 for 1s
-    overlap = True
-    overlap_size = 48
 
     train_data, class_names = read_data("HMP_Dataset")
     print("Split dataset before quantization...")
@@ -191,15 +186,20 @@ def main():
                         print('segment size info: {0}'.format(segment_size))
                         for overlap_percent in overlap_percents:
                             print('overlap percent info: {0}'.format(overlap_percent))
-                            accuracy = experiement(k[0], k[1], segment_size, overlap, overlap_percent, train_data, test_data, clf, class_names)
-                            storing_info = np.array([overlap, clf, k, segment_size, overlap_percent, accuracy])
+                            try:
+                                accuracy = experiement(k[0], k[1], segment_size, overlap, overlap_percent, train_data, test_data, clf, class_names)
+                                storing_info = np.array([overlap, clf, k, segment_size, overlap_percent, accuracy])
+                            except:
+                                continue
                     else:
                         print('Overlap? :{0}'.format(overlap))
                         print('cluster number info: {0}'.format(k))
                         print('segment size info: {0}'.format(segment_size))
-                        accuracy = experiement(k[0], k[1], segment_size, overlap, 0.1, train_data, test_data, clf, class_names)
-                        storing_info = np.array([overlap, clf, k, segment_size, 'N/A', accuracy])
-
+                        try:
+                            accuracy = experiement(k[0], k[1], segment_size, overlap, 0.1, train_data, test_data, clf, class_names)
+                            storing_info = np.array([overlap, clf, k, segment_size, 'N/A', accuracy])
+                        except:
+                            continue
 
 
 if __name__ == '__main__':
