@@ -1,0 +1,51 @@
+---
+title: "CS498 AML HW6"
+author: "Pengyu Cheng"
+date: "10/19/2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Question a): Regress house price (variable 14) against all others, and use leverage,
+Cook’s distance, and standardized residuals to find possible outliers. Produce
+a diagnostic plot that allows you to identify possible outliers
+```{r}
+library(data.table)
+boston.data = fread('https://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.data')
+head(boston.data)
+model = lm(boston.data$V14~., data = boston.data)
+plot(model)
+```
+From the "residual vs fitted" plot we can see there exists some non-linearity replationship and point 369, 372 and 373 are identified as possible outliers. We refer to "scale-location" for further information. In this plot, we find that points 373, 372 and 369 are indeed beyond 2 standard deviations;thus we feel comfortable to flag them as possible outliers. From the "residuals vs leverage" plot, we identify another point as possible outlier: point 365 with  suspiciously large Cook’s distance. There are points that have high leverage but small residuals and we leave it as it is for now.  
+
+# Question b): Remove all the points you suspect as outliers, and compute a new regression. Produce a diagnostic plot that allows you to identify possible outliers.
+```{r}
+#remove data points 373, 369 365 and 372
+new.boston.data = boston.data[-c(373, 372, 369, 365),]
+new.model = lm(new.boston.data$V14~., data=new.boston.data)
+plot(new.model)
+```
+
+# Question c): Apply a Box-Cox transformation to the dependent variable – what is the
+best value of the parameter?
+```{r}
+library(MASS)
+boxcox(new.model)
+boxcox.transform = boxcox(new.model)
+best.lambda = boxcox.transform$x[which(boxcox.transform$y == max(boxcox.transform$y))]
+```
+The best parameter of $\lambda$ is `r best.lambda`
+
+# Question d): Now transform the dependent variable, build a linear regression, and check
+the standardized residuals. If they look acceptable, produce a plot of fitted
+house price against true house price.
+```{r}
+
+transform.model = lm(((new.boston.data$V14^best.lambda - 1)/best.lambda) ~., data=new.boston.data)
+plot(transform.model)
+plot(new.boston.data$V14, (fitted.values(transform.model) * best.lambda + 1)^(1/best.lambda))
+```
+
+
+
