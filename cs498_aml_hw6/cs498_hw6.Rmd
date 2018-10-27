@@ -7,44 +7,52 @@ output:
   pdf_document: default
 ---
 
-# Question a): Regress house price (variable 14) against all others, and use leverage,
-Cook’s distance, and standardized residuals to find possible outliers. Produce
-a diagnostic plot that allows you to identify possible outliers
+### Question a): Regress house price (variable 14) against all others, and use leverage, Cook’s distance, and standardized residuals to find possible outliers. Produce a diagnostic plot that allows you to identify possible outliers
 ```{r}
 library(data.table)
 boston.data = fread('https://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.data')
-head(boston.data)
+num.points = nrow(boston.data)
 model = lm(boston.data$V14~., data = boston.data)
-plot(model)
+#plot all points id for identification
+plot(model, which = 5, id.n=num.points)
 ```
-From the "residual vs fitted" plot we can see there exists some non-linearity replationship and point 369, 372 and 373 are identified as possible outliers. We refer to "scale-location" for further information. In this plot, we find that points 373, 372 and 369 are indeed beyond 2 standard deviations;thus we feel comfortable to flag them as possible outliers. From the "residuals vs leverage" plot, we identify another point as possible outlier: point 365 with  suspiciously large Cook’s distance. There are points that have high leverage but small residuals and we leave it as it is for now.  
 
-# Question b): Remove all the points you suspect as outliers, and compute a new regression. Produce a diagnostic plot that allows you to identify possible outliers.
+### Question b): Remove all the points you suspect as outliers, and compute a new regression. Produce a diagnostic plot that allows you to identify possible outliers.
 ```{r}
-#remove data points 373, 369 365 and 372
-new.boston.data = boston.data[-c(373, 372, 369, 365),]
+new.boston.data = boston.data[-c(369, 372, 373, 370, 366, 365, 381, 419, 406, 411),]
 new.model = lm(new.boston.data$V14~., data=new.boston.data)
-plot(new.model)
+plot(new.model, which = 5)
 ```
 
-# Question c): Apply a Box-Cox transformation to the dependent variable – what is the
-best value of the parameter?
+### Question c): Apply a Box-Cox transformation to the dependent variable – what is the best value of the parameter?
 ```{r}
 library(MASS)
-boxcox(new.model)
 boxcox.transform = boxcox(new.model)
 best.lambda = boxcox.transform$x[which(boxcox.transform$y == max(boxcox.transform$y))]
 ```
 The best parameter of $\lambda$ is `r best.lambda`
 
-# Question d): Now transform the dependent variable, build a linear regression, and check
-the standardized residuals. If they look acceptable, produce a plot of fitted
+### Question d): Now transform the dependent variable, build a linear regression, and check the standardized residuals. If they look acceptable, produce a plot of fitted
 house price against true house price.
 ```{r}
-
 transform.model = lm(((new.boston.data$V14^best.lambda - 1)/best.lambda) ~., data=new.boston.data)
-plot(transform.model)
-plot(new.boston.data$V14, (fitted.values(transform.model) * best.lambda + 1)^(1/best.lambda))
+plot(transform.model, which = 5)
+plot(new.boston.data$V14, (fitted.values(transform.model) * best.lambda + 1)^(1/best.lambda), xlab = "fitted value", ylab = "ture value")
+abline(1,1,col='red')
+```
+### Plot of Standardized residuals vs Fitted values for the final linear regression model obtained before removing all outliers and transforming the dependent variable
+```{r}
+std.res = rstandard(model)
+plot(model$fitted.values, std.res, ylab="Standardized Residuals", xlab="Fitted Value", main=" Standardized residuals vs Fitted values for original model") 
+abline(0, 0, col='red') 
+```
+### Plot of Standardized residuals vs Fitted values for the final linear regression model obtained after removing all outliers and transforming the dependent variable
+```{r}
+transform.std.res = rstandard(transform.model)
+#scale back to original range
+transform.fitted.values = (fitted.values(transform.model) * best.lambda + 1)^(1/best.lambda)
+plot(transform.fitted.values, transform.std.res, ylab="Standardized Residuals", xlab="Fitted Value", main=" Standardized residuals vs Fitted values for final model") 
+abline(0, 0, col='red')   
 ```
 
 
