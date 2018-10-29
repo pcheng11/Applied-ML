@@ -45,7 +45,21 @@ at least by the deviance criterion. Now produce a scatter plot of true
 values vs predicted values for data in blogData test-*.csv. How well
 does this regression work?
 ```{r}
-blog.test.data = read.csv(file="blogData_test-2012.02.03.00_00.csv", header=TRUE, sep=",")
+setwd("/Users/pengyucheng/Desktop/Applied-ML/data/cs498_aml_hw7_dataset/test_data")
+file_list = list.files()
+flag = 1
+for (file in file_list){
+    if (flag == 1) {
+      blog.test.data = read.csv(file, header=F, sep=",")
+      flag = 0
+    }
+    else {
+      new_dataset = read.csv(file, header=F, sep=",")
+      blog.test.data = rbind(blog.test.data, new_dataset)
+      rm(new_dataset)
+    }
+}
+nrow(blog.test.data)
 test.Y = as.matrix(blog.test.data[,281])
 test.X = as.matrix(blog.test.data[,-281])
 fitted.values = predict(cv.fit, newx=test.X, s="lambda.min", type = "response")
