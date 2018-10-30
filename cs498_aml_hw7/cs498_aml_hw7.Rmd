@@ -10,7 +10,6 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
 Read in dataset
 ```{r}
 setwd("/Users/pengyucheng/Desktop/Applied-ML/")
@@ -21,8 +20,8 @@ X = as.matrix(blog.data[, -281])
 row.nums = nrow(blog.data)
 col.nums = ncol(blog.data)
 ```
-
-a) Predict the dependent variable using all features, a generalized linear model (I’d use a Poisson model, because these are count variables), and the Lasso. For this exercise, you really should use glmnet in R. Produce a plot of the cross-validated deviance of the model against the regularization variable (cv.glmnet and plot will do this for you). Use only the data in blogData train.csv.
+12.3 
+a)
 ```{r}
 library(glmnet)
 require(doMC)
@@ -30,20 +29,14 @@ registerDoMC(cores=2)
 cv.fit = cv.glmnet(X, Y,family= "poisson", alpha=1)
 plot(cv.fit)
 ```
-b) Your cross-validated plot of deviance likely doesn’t mean all that much to you, because the deviance of a Poisson model takes a bit of getting used to. Choose a value of the regularization constant that yields a strong model, at least by the deviance criterion. Now produce a scatter plot of true values vs predicted values for data in blogData train.csv. How well does this regression work? keep in mind that you are looking at predictions on the training set.  
-
-lambda.min = 0.01019303
-
+b)
 ```{r}
+cv.fit$lambda.min
 fitted.values = predict(cv.fit, newx=X, s="lambda.min", type = "response")
 plot(Y, floor(fitted.values), xlab='true values', ylab='predcited values', main='true values vs predicted values on training set')
 abline(1,1,col='red')
 ```
-
-Choose a value of the regularization constant that yields a strong model,
-at least by the deviance criterion. Now produce a scatter plot of true
-values vs predicted values for data in blogData test-*.csv. How well
-does this regression work?
+c)
 ```{r}
 setwd("/Users/pengyucheng/Desktop/Applied-ML/data/cs498_aml_hw7_dataset/test_data")
 file_list = list.files()
@@ -66,8 +59,10 @@ fitted.values = predict(cv.fit, newx=test.X, s="lambda.min", type = "response")
 plot(test.Y, floor(fitted.values), xlab='true values', ylab='predcited values', main='true values vs predicted values on test set')
 abline(1,1,col='red')
 ```
-##12.4
+
+12.4
 ```{r}
+set.seed(22)
 setwd("/Users/pengyucheng/Desktop/Applied-ML/")
 raw.data.x = read.csv(file ="data/cs498_aml_hw7_dataset/gene_data_x.txt", header = F, sep = " ")
 gene.data.x = t(as.matrix(raw.data.x))
@@ -77,10 +72,10 @@ gene.data.y = as.matrix(apply(gene.data.y, 1, FUN=function(x){if (x > 0) {x = 0}
 cv.gene.fit = cv.glmnet(gene.data.x, gene.data.y,family= "binomial", type.measure="class")
 plot(cv.gene.fit)
 sum(gene.data.y)/nrow(gene.data.y)
-gene.lambda = cv.gene.fit$lambda.min
+(gene.lambda = cv.gene.fit$lambda.min)
 mean(predict(cv.gene.fit, gene.data.x, s=gene.lambda, type="class") == gene.data.y)
 ```
-##12.5
+12.5
 a)
 ```{r}
 setwd("/Users/pengyucheng/Desktop/Applied-ML/")
@@ -92,7 +87,10 @@ crusio.y = data.matrix(crusio.data[,1])
 crusio.x = data.matrix(crusio.data[,-1])
 cv.crusio.fit = cv.glmnet(crusio.x, crusio.y, family= "binomial", type.measure="class", alpha=1)
 plot(cv.crusio.fit)
-crusio.lambda = cv.crusio.fit$lambda.min
+crusio.y == "f"
+which(crusio.y == "f")
+length(which(crusio.y == "m"))/nrow(crusio.y)
+(crusio.lambda = cv.crusio.fit$lambda.min)
 mean(predict(cv.crusio.fit, crusio.x, s=crusio.lambda, type="class") == crusio.y)
 ```
 b) 
@@ -100,6 +98,7 @@ b)
 setwd("/Users/pengyucheng/Desktop/Applied-ML/")
 raw.data = read.csv(file = "data/cs498_aml_hw7_dataset/Crusio1.csv")
 crusio.data.s = raw.data[,c(1, 4:41)]
+crusio.data.s
 #omit nas
 crusio.data.s = na.omit(crusio.data.s)
 #drop strains less than 10 rows
@@ -108,13 +107,15 @@ for (s in unique(crusio.data.s$strain)) {
     crusio.data.s = crusio.data.s[!crusio.data.s$strain == s, ]
   }
 }
-nrow(crusio.data.s)
 crusio.s.y = data.matrix(crusio.data.s[,1])
 crusio.s.x = data.matrix(crusio.data.s[,-1])
 cv.crusio.s.fit = cv.glmnet(crusio.s.x, crusio.s.y, family= "multinomial", type.measure="class", alpha=1)
 plot(cv.crusio.s.fit)
-crusio.s.lambda = cv.crusio.s.fit$lambda.min
+(crusio.s.lambda = cv.crusio.s.fit$lambda.min)
 mean(predict(cv.crusio.s.fit, crusio.s.x, s=crusio.s.lambda, type="class") == crusio.s.y, alpha=1)
+#basline theoretical value:
+1/length(levels(crusio.data.s$strain))
+#simulation value:
+set.seed(22)
+sum(sample(unique(crusio.s.y), length(crusio.s.y), replace=TRUE)==crusio.s.y)/nrow(crusio.data.s)
 ```
-
-
