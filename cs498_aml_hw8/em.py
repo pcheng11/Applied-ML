@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from sklearn.cluster import KMeans
 
-def load_image(image_path) :
-    img = Image.open(image_path + 'smallsunset.jpg')
+def load_image(image_path, image_name) :
+    img = Image.open(image_path + image_name)
     img.load()
     data = np.asarray(img, dtype="int32")
     #reshape image to nx3
@@ -19,10 +19,9 @@ def random_init(k, data, n):
     pi = np.array([(1/k)]*k)
     return data[n, :], pi
 
-def boot_step(k, data):
+def boot_step(k, data, state):
     #initialize cluster center
-    kmeans = KMeans(n_clusters=k, random_state=0).fit(data)
-    print(kmeans.cluster_centers_)
+    kmeans = KMeans(n_clusters=k, random_state=state).fit(data)
     #initialize weight(scala) for each blob of data
     pi = np.array([(1/k)]*k)
     return kmeans.cluster_centers_, pi
@@ -37,20 +36,20 @@ def e_step(x, mu, pi, k, n):
             d1 = (x[i,:] - mu[j,:])
             d2 = (x[i,:] - mu[j,:])
             w[i,j] = np.exp(-0.5*(np.dot(d1.T, d2) - dmin)) * pi[j]
-    print('check w:', w)
     w = w / np.sum(w, axis=1)[:, None] 
     return w
 
 def m_step(w, x, mu, pi, k, n, img_dim):
     mu = np.dot(x.T, w).T
     mu = mu / np.sum(w, axis=0)[:,None]
-    print('mean vector:', mu)
     pi = np.sum(w, axis=0) / (img_dim[0] * img_dim[1])
     # make sure pi sums up to 1:
     # set one probability to (1−all other)
     pi[k-1] = 1 - sum(pi[:k-1])
-    print('checking pi sums up to 1:', sum(pi))
     return mu, pi
+
+def check_convergence(mu, old_mu):
+    return np.sum((mu - old_mu)**2)
 
 def assign_pixel(w, image_data, k, n, img_dim):
     pred_cluster = np.argmax(w, axis=1) #nx1
@@ -63,27 +62,65 @@ def assign_pixel(w, image_data, k, n, img_dim):
     new_graph = np.asarray(np.reshape(new_graph, (img_dim[0], img_dim[1], 3)), dtype="uint8")
     return new_graph
 
-def show_graph(new_graph):
+def show_graph(new_graph, name, k, state):
     plt.imshow(new_graph)
-    plt.imsave('segmentation', new_graph)
+    plt.imsave(name[:-3] + '_' + str(k) + 'state_' + str(state) + 'segmentations.jpg', new_graph)
 
 
 def main():
-    random = True
+    random = False
+    epsilon = 0.1
     image_path = '/Users/pengyucheng/Desktop/Applied-ML/cs498_aml_hw8/dataset/'
-    image_data, img_dim = load_image(image_path)
-    n = image_data.shape[0]
-    k = 10
-    if (random):
-        mu, pi = random_init(k, image_data, n)
-    else:
-        mu, pi = boot_step(k, image_data)
-    for i in range(20):
-        w = e_step(image_data, mu, pi, k, n)
-        mu, pi = m_step(w, image_data, mu, pi, k, n, img_dim)
 
-    graph = assign_pixel(w, image_data, k, n, img_dim)
-    show_graph(graph)
+
+    for image_name in ['RobertMixed03.jpg', 'smallsunset.jpg', 'tree.jpg', 'smallstrelitzia.jpg']:
+        print('image:', image_name)
+        if image_name == 'tree.jpg':
+            k = 20
+            for i in [0, 19, 22, 42, 69]:
+                image_data, img_dim = load_image(image_path, image_name)
+                n = image_data.shape[0]
+                if (random):
+                    mu, pi = random_init(k, image_data, n)
+                else:
+                    mu, pi = boot_step(k, image_data, i)
+                old_mu = np.Inf
+                iter = 1
+                while(True):
+                    print('iteration:', iter)
+                    iter += 1
+                    w = e_step(image_data, mu, pi, k, n)
+                    mu, pi = m_step(w, image_data, mu, pi, k, n, img_dim)
+                    diff = check_convergence(mu, old_mu)
+                    old_mu = mu
+                    if diff < epsilon:
+                        break
+
+                graph = assign_pixel(w, image_data, k, n, img_dim)
+                show_graph(graph, image_name, k, i)
+
+        for k in [10, 20, 50]:
+            print('segmentation length:', k)
+            image_data, img_dim = load_image(image_path, image_name)
+            n = image_data.shape[0]
+            if (random):
+                mu, pi = random_init(k, image_data, n)
+            else:
+                mu, pi = boot_step(k, image_data, 0)
+            old_mu = np.Inf
+            iter = 1
+            while(True):
+                print('iteration:', iter)
+                iter += 1
+                w = e_step(image_data, mu, pi, k, n)
+                mu, pi = m_step(w, image_data, mu, pi, k, n, img_dim)
+                diff = check_convergence(mu, old_mu)
+                old_mu = mu
+                if diff < epsilon:
+                    break
+
+            graph = assign_pixel(w, image_data, k, n, img_dim)
+            show_graph(graph, image_name, k， 0)
 
 if __name__ == '__main__':
     main()
