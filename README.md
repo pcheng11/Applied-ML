@@ -1,1 +1,1 @@
-# cs498 Applied Machine Learning weekly projects
+# Applied Machine Learning little projects
